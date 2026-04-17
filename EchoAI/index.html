@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EchoAI Remix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__brand">
+        <button class="sidebar__toggle mobile-only icon-button" id="sidebar-close" type="button" aria-label="Close sidebar">×</button>
+        <div class="brand-mark">✦</div>
+        <div>
+          <div class="brand-title">EchoAI</div>
+          <div class="brand-tag">Local Character Chats</div>
+        </div>
+      </div>
+
+      <button class="primary-button primary-button--wide" id="new-chat-btn" type="button">
+        <span>+</span>
+        <span>New Character Chat</span>
+      </button>
+
+      <div class="sidebar__section-heading">
+        <span>Your Chats</span>
+        <button class="icon-button" id="clear-all-btn" type="button" title="Delete all chats">⌫</button>
+      </div>
+
+      <div class="chat-list" id="chat-list"></div>
+
+      <div class="sidebar__status status-pill" id="connection-status">
+        <span class="status-pill__dot"></span>
+        <span>LM Studio not checked</span>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <section class="hero-screen" id="welcome-screen">
+        <div class="hero-screen__content">
+          <div class="hero-topbar">
+            <div class="hero-badge">Runs locally with LM Studio</div>
+            <button class="secondary-button secondary-button--compact" id="hero-open-settings" type="button">Settings</button>
+          </div>
+
+          <h2>AI character chats on your own machine.</h2>
+          <p>Pick a character from the home screen, start chatting instantly, or create your own persona with a custom avatar.</p>
+
+          <div class="hero-actions">
+            <button class="primary-button" id="hero-open-picker" type="button">Browse Characters</button>
+            <button class="secondary-button" id="open-custom-builder" type="button">Create Character</button>
+          </div>
+
+          <div class="hero-cards" id="hero-character-preview"></div>
+        </div>
+      </section>
+
+      <section class="chat-screen hidden" id="chat-screen">
+        <header class="chat-header">
+          <div class="chat-header__main">
+            <button class="icon-button mobile-only" id="sidebar-open" type="button" title="Open sidebar">☰</button>
+            <button class="icon-button" id="back-to-home-btn" type="button" title="Back">←</button>
+            <div class="chat-header__avatar" id="character-avatar"></div>
+            <div>
+              <div class="chat-header__title" id="character-name"></div>
+              <div class="chat-header__subtitle" id="character-status">Ready for local conversation</div>
+            </div>
+          </div>
+
+          <div class="chat-header__actions">
+            <button class="secondary-button secondary-button--compact" id="chat-settings-btn" type="button">Settings</button>
+            <button class="secondary-button secondary-button--compact" id="regenerate-btn" type="button">Regenerate</button>
+            <button class="secondary-button secondary-button--compact danger-button" id="clear-chat-btn" type="button">Clear</button>
+            <button class="secondary-button secondary-button--compact" id="character-info-btn" type="button">Info</button>
+          </div>
+        </header>
+
+        <div class="message-list" id="message-list"></div>
+
+        <footer class="composer">
+          <div class="composer__panel">
+            <textarea id="message-input" rows="1" placeholder="Message your character..."></textarea>
+            <div class="composer__actions">
+              <button class="primary-button primary-button--compact" id="send-btn" type="button">Send</button>
+            </div>
+          </div>
+          <p class="composer__hint">Chats are saved locally in your browser.</p>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="builder-modal">
+    <div class="modal__backdrop" data-close-modal="builder-modal"></div>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <div>
+          <h2>Create a character</h2>
+          <p>Everything here stays in local storage unless you delete it.</p>
+        </div>
+        <button class="icon-button" type="button" data-close-modal="builder-modal">×</button>
+      </div>
+
+      <form class="stack" id="character-form">
+        <label class="field">
+          <span>Name</span>
+          <input id="custom-name" type="text" maxlength="32" placeholder="Shadow, Nova, Sol...">
+        </label>
+
+        <div class="avatar-builder">
+          <div>
+            <div class="field-label">Emoji avatar</div>
+            <div class="emoji-grid" id="emoji-grid"></div>
+          </div>
+
+          <div class="field">
+            <span>Upload image avatar</span>
+            <label class="upload-dropzone" for="avatar-file">
+              <strong>Drop an image or click to upload</strong>
+              <small>PNG or JPG, up to 2MB</small>
+            </label>
+            <input id="avatar-file" type="file" accept="image/*" hidden>
+            <div class="avatar-preview hidden" id="avatar-preview"></div>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Short description</span>
+          <input id="custom-description" type="text" maxlength="100" placeholder="A grounded strategist with a dry sense of humor">
+        </label>
+
+        <label class="field">
+          <span>Personality prompt</span>
+          <textarea id="custom-prompt" rows="5" placeholder="You are a calm strategist who answers clearly, asks thoughtful questions, and stays practical."></textarea>
+        </label>
+
+        <div class="split-actions">
+          <button class="secondary-button" type="button" data-close-modal="builder-modal">Cancel</button>
+          <button class="primary-button" type="submit">Create Character</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="settings-modal">
+    <div class="modal__backdrop" data-close-modal="settings-modal"></div>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <div>
+          <h2>LM Studio Settings</h2>
+          <p>Connect to your local server and choose the active model.</p>
+        </div>
+        <button class="icon-button" type="button" data-close-modal="settings-modal">×</button>
+      </div>
+
+      <div class="stack">
+        <label class="field">
+          <span>API base URL</span>
+          <input id="api-base-url" type="text" placeholder="http://localhost:1234/v1">
+        </label>
+
+        <label class="field">
+          <span>Model</span>
+          <div class="inline-field">
+            <select id="model-select"></select>
+            <button class="secondary-button secondary-button--compact" id="detect-models-btn" type="button">Detect</button>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Temperature <strong id="temperature-label">0.8</strong></span>
+          <input id="temperature-slider" type="range" min="0" max="1" step="0.1" value="0.8">
+        </label>
+
+        <div class="split-actions">
+          <button class="secondary-button" type="button" data-close-modal="settings-modal">Close</button>
+          <button class="primary-button" id="save-settings-btn" type="button">Save & Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="info-drawer hidden" id="info-drawer">
+    <div class="info-drawer__header">
+      <div>
+        <h2>Character Info</h2>
+        <p>Profile and system prompt</p>
+      </div>
+      <button class="icon-button" id="close-info-btn" type="button">×</button>
+    </div>
+    <div class="info-drawer__content" id="info-drawer-content"></div>
+  </aside>
+
+  <div class="toast-stack" id="toast-stack"></div>
+
+  <script src="./scripts/data.js"></script>
+  <script src="./scripts/main.js"></script>
+</body>
+</html>
