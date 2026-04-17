@@ -24,7 +24,7 @@
 
 1.  **Launch LM Studio**: Open LM Studio and start the **Local Server** (usually on port 1234).
 2.  **Enable CORS**: Ensure "Cross-Origin Resource Sharing" is enabled in your LM Studio settings to allow the web app to communicate with the server.
-3.  **Clone & Open**: Clone this repository and open `index.html` in any modern browser.
+3.  **Clone & Open**: Clone this repository and open `start-echoai.bat` in any modern browser.
 4.  **Connect**: Open the **Settings** modal in EchoAI, detect your models, and start chatting!
 
 ## 📄 License
