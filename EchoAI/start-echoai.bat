@@ -8,7 +8,7 @@ set "URL=http://localhost:%PORT%/"
 
 where py >nul 2>nul
 if %errorlevel%==0 (
-  start "EchoAI Remix Server" cmd /k "cd /d ""%~dp0"" && py -m http.server %PORT%"
+  start "EchoAI Server" cmd /k "cd /d ""%~dp0"" && py server.py"
   timeout /t 2 /nobreak >nul
   start "" "%URL%"
   exit /b 0
@@ -16,7 +16,7 @@ if %errorlevel%==0 (
 
 where python >nul 2>nul
 if %errorlevel%==0 (
-  start "EchoAI Remix Server" cmd /k "cd /d ""%~dp0"" && python -m http.server %PORT%"
+  start "EchoAI Server" cmd /k "cd /d ""%~dp0"" && python server.py"
   timeout /t 2 /nobreak >nul
   start "" "%URL%"
   exit /b 0
