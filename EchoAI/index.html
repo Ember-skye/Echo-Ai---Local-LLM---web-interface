@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -10,7 +10,9 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23ff86c3'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='30' font-family='Arial' fill='%231a0f0c'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css?v=20260420-3">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
@@ -20,23 +22,20 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__brand">
         <button class="sidebar__toggle mobile-only icon-button" id="sidebar-close" type="button"
-          aria-label="Close sidebar">×</button>
-        <div class="brand-mark">✦</div>
+          aria-label="Close sidebar">&times;</button>
+        <div class="brand-mark">&#10022;</div>
         <div>
           <div class="brand-title">LLM LINK</div>
           <div class="brand-tag">ADMIN ACCESS</div>
         </div>
       </div>
 
-      <div class="sidebar__new-character">
-        <button class="primary-button create-pill-btn" id="new-character-btn" type="button">
-          + New Character
-        </button>
-      </div>
-
       <nav class="sidebar-nav">
         <button class="nav-button is-active" id="nav-explore-btn" type="button">
           Explore
+        </button>
+        <button class="nav-button nav-button--create" id="new-character-btn" type="button">
+          + New Character
         </button>
         <button class="nav-button" id="nav-archive-btn" type="button">
           Archive chats
@@ -46,12 +45,13 @@
         </button>
       </nav>
 
-      <div class="sidebar__section-heading">
-        <span>Recent Chats</span>
-        <button class="icon-button" id="clear-all-btn" type="button" title="Delete all chats">⌫</button>
+      <div class="sidebar__recent-chats">
+        <div class="sidebar__section-heading">
+          <span>Recent Chats</span>
+          <button class="icon-button" id="clear-all-btn" type="button" title="Delete all chats">&#9003;</button>
+        </div>
+        <div class="sidebar-chat-list" id="chat-list"></div>
       </div>
-
-      <div class="chat-list" id="chat-list"></div>
 
       <div class="sidebar__status status-pill" id="connection-status">
         <span class="status-pill__dot"></span>
@@ -76,10 +76,8 @@
           </div>
 
           <div class="search-filter-bar">
-            <input type="text" class="search-input" placeholder="Find entities..." readonly>
-            <div class="category-tabs">
-              <button class="category-tab is-active">ORIGINALS</button>
-            </div>
+            <input type="text" class="search-input" id="search-input" placeholder="Find entities...">
+            <div class="category-tabs" id="category-tabs"></div>
           </div>
 
           <div class="section-title">
@@ -97,15 +95,15 @@
             <h2>Archive Hub</h2>
             <p>Dormant neural links and severed connections.</p>
           </div>
-          <div class="chat-list archive-grid" id="archive-list"></div>
+          <div class="archive-grid" id="archive-list"></div>
         </div>
       </section>
 
       <section class="chat-screen hidden" id="chat-screen">
         <header class="chat-header">
           <div class="chat-header__main">
-            <button class="icon-button mobile-only" id="sidebar-open" type="button" title="Open sidebar">☰</button>
-            <button class="icon-button" id="back-to-home-btn" type="button" title="Back">←</button>
+            <button class="icon-button mobile-only" id="sidebar-open" type="button" title="Open sidebar">&#9776;</button>
+            <button class="icon-button" id="back-to-home-btn" type="button" title="Back">&larr;</button>
             <div class="chat-header__avatar" id="character-avatar"></div>
             <div>
               <div class="chat-header__title" id="character-name"></div>
@@ -147,7 +145,7 @@
           <h2 id="builder-title">Create an Entity</h2>
           <p>Forge a new persona into existence.</p>
         </div>
-        <button class="icon-button" type="button" data-close-modal="builder-modal">×</button>
+        <button class="icon-button" type="button" data-close-modal="builder-modal">&times;</button>
       </div>
 
       <form class="stack" id="character-form">
@@ -181,6 +179,18 @@
             placeholder="You are a calm strategist who answers clearly, asks thoughtful questions, and stays practical."></textarea>
         </label>
 
+        <div class="field">
+          <span>Tags</span>
+          <div class="tag-builder">
+            <div class="inline-field">
+              <input id="custom-tag-input" type="text" maxlength="24" placeholder="Add a tag and press Enter">
+              <button class="secondary-button secondary-button--compact" id="add-tag-btn" type="button">Add Tag</button>
+            </div>
+            <div class="tag-chip-list" id="builder-tag-list"></div>
+            <div class="tag-suggestion-list" id="builder-tag-suggestions"></div>
+          </div>
+        </div>
+
         <div class="split-actions">
           <button class="secondary-button" type="button" data-close-modal="builder-modal">Cancel</button>
           <button class="primary-button" type="submit" id="builder-submit-btn">Create Entity</button>
@@ -197,7 +207,7 @@
           <h2>Neural Link Settings</h2>
           <p>Connect to your local LM Studio node.</p>
         </div>
-        <button class="icon-button" type="button" data-close-modal="settings-modal">×</button>
+        <button class="icon-button" type="button" data-close-modal="settings-modal">&times;</button>
       </div>
 
       <div class="stack">
@@ -234,7 +244,7 @@
         <h2>Entity Info</h2>
         <p>Profile and system directives</p>
       </div>
-      <button class="icon-button" id="close-info-btn" type="button">×</button>
+      <button class="icon-button" id="close-info-btn" type="button">&times;</button>
     </div>
     <div class="info-drawer__content" id="info-drawer-content"></div>
   </aside>

@@ -1,0 +1,16 @@
+{
+  "chats": [
+    {
+      "id": "chat_1776705070806_a5524h",
+      "characterId": "char_evelyn",
+      "title": "Yukiho",
+      "createdAt": 1776705070806,
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "*Connection established with Yukiho*\n\nIt's raining heavily. A drenched girl in a school uniform is sitting in front of your door, looking lost but defensive."
+        }
+      ]
+    }
+  ]
+}

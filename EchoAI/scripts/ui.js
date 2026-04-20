@@ -1,4 +1,4 @@
-import { state, getCharacterById, getCurrentChat } from "./state.js";
+﻿import { state, getCharacterById, getCurrentChat } from "./state.js";
 import { DEFAULT_SETTINGS, HERO_BANNERS } from "./data.js";
 
 export function $(id) {
@@ -18,6 +18,85 @@ export function escapeHTML(value) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizeTag(tag) {
+  return String(tag || "").trim().replace(/\s+/g, " ");
+}
+
+function includesSearch(character, query) {
+  if (!query) return true;
+  const haystack = [
+    character.name,
+    character.title,
+    character.description,
+    character.systemPrompt,
+    ...(character.tags || [])
+  ].join(" ").toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
+export function getAvailableTags() {
+  const tags = new Map();
+
+  state.characters.forEach((character) => {
+    (character.tags || []).forEach((tag) => {
+      const normalized = normalizeTag(tag);
+      if (!normalized) return;
+      const key = normalized.toLowerCase();
+      if (!tags.has(key)) tags.set(key, normalized);
+    });
+  });
+
+  const sorted = Array.from(tags.values()).sort((a, b) => {
+    if (a.toLowerCase() === "originals") return -1;
+    if (b.toLowerCase() === "originals") return 1;
+    return a.localeCompare(b);
+  });
+
+  return ["All", ...sorted];
+}
+
+export function renderCategoryTabs() {
+  const container = $("category-tabs");
+  if (!container) return;
+  const availableTags = getAvailableTags();
+  if (!availableTags.includes(state.activeTag)) {
+    state.activeTag = "All";
+  }
+
+  container.innerHTML = availableTags.map((tag) => {
+    const activeClass = state.activeTag === tag ? "is-active" : "";
+    return `<button class="category-tab ${activeClass}" type="button" data-tag-filter="${escapeHTML(tag)}">${escapeHTML(tag)}</button>`;
+  }).join("");
+}
+
+export function renderBuilderTags() {
+  const tagList = $("builder-tag-list");
+  const suggestions = $("builder-tag-suggestions");
+  const builderTags = Array.isArray(state.builderTags) ? state.builderTags : [];
+
+  if (tagList) {
+    if (!builderTags.length) {
+      tagList.innerHTML = `<span class="tag-builder__hint">No tags added yet.</span>`;
+    } else {
+      tagList.innerHTML = builderTags.map((tag) => `
+        <button class="tag-chip tag-chip--selected" type="button" data-remove-builder-tag="${escapeHTML(tag)}">
+          ${escapeHTML(tag)} <span aria-hidden="true">&times;</span>
+        </button>
+      `).join("");
+    }
+  }
+
+  if (suggestions) {
+    const suggestionTags = getAvailableTags()
+      .filter((tag) => tag !== "All" && !builderTags.some((selected) => selected.toLowerCase() === tag.toLowerCase()))
+      .slice(0, 10);
+
+    suggestions.innerHTML = suggestionTags.map((tag) => `
+      <button class="tag-chip" type="button" data-add-builder-tag="${escapeHTML(tag)}">${escapeHTML(tag)}</button>
+    `).join("");
+  }
+}
+
 export function formatTime(value) {
   if (!value) return "";
   return new Date(value).toLocaleString([], {
@@ -33,7 +112,8 @@ export function renderAvatar(character, className) {
   if (character?.avatarImage) {
     return `<div class="${className}"><img src="${character.avatarImage}" alt="${escapeHTML(name)} avatar"></div>`;
   }
-  return `<div class="${className}">${escapeHTML(character?.avatar || "✨")}</div>`;
+  const fallbackAvatar = character?.avatar || "*";
+  return `<div class="${className}">${escapeHTML(fallbackAvatar)}</div>`;
 }
 
 export function setConnectionStatus(text, online = false) {
@@ -108,6 +188,7 @@ export function resetBuilder() {
   if ($("custom-name")) $("custom-name").value = "";
   if ($("custom-description")) $("custom-description").value = "";
   if ($("custom-prompt")) $("custom-prompt").value = "";
+  if ($("custom-tag-input")) $("custom-tag-input").value = "";
   if ($("avatar-file")) $("avatar-file").value = "";
   
   const preview = $("avatar-preview");
@@ -116,6 +197,8 @@ export function resetBuilder() {
     preview.classList.add("hidden");
   }
   state.uploadedImagePath = "";
+  state.builderTags = [];
+  renderBuilderTags();
 }
 
 export function openEditCharacter(characterId) {
@@ -130,6 +213,8 @@ export function openEditCharacter(characterId) {
   if ($("custom-name")) $("custom-name").value = char.name;
   if ($("custom-description")) $("custom-description").value = char.description;
   if ($("custom-prompt")) $("custom-prompt").value = char.systemPrompt;
+  state.builderTags = Array.isArray(char.tags) ? [...char.tags] : [];
+  renderBuilderTags();
   
   if (char.avatarImage) {
     state.uploadedImagePath = char.avatarImage;
@@ -147,7 +232,23 @@ export function renderHeroCards() {
   const container = $("hero-character-preview");
   if (!container) return;
 
-  const html = state.characters.map((character) => {
+  const filteredCharacters = state.characters.filter((character) => {
+    const matchesTag = state.activeTag === "All"
+      || (character.tags || []).some((tag) => normalizeTag(tag).toLowerCase() === state.activeTag.toLowerCase());
+    return matchesTag && includesSearch(character, state.searchQuery);
+  });
+
+  if (!filteredCharacters.length) {
+    container.innerHTML = `
+      <article class="hero-preview-card hero-preview-card--empty">
+        <strong>No matches found</strong>
+        <span>Try a different search or tag filter.</span>
+      </article>
+    `;
+    return;
+  }
+
+  const html = filteredCharacters.map((character) => {
     const tagsHtml = character.tags ? character.tags.map(t => `<span class="hero-card-tag">${escapeHTML(t)}</span>`).join('') : '';
     
     let editBtnHtml = `<button class="secondary-button secondary-button--compact" type="button" data-edit-character="${character.id}">Edit</button>`;
@@ -195,7 +296,7 @@ export function renderSidebar() {
           <div class="chat-card__title">${escapeHTML(chat.title)}</div>
           <div class="chat-card__meta">${escapeHTML(preview.slice(0, 40))}</div>
         </div>
-        <button class="icon-button" type="button" data-delete-chat="${chat.id}" title="Sever link">×</button>
+        <button class="icon-button" type="button" data-delete-chat="${chat.id}" title="Sever link">&times;</button>
       </article>
     `;
   }).join("");
@@ -287,11 +388,11 @@ export function renderMarkdown(content) {
   return escapeHTML(content);
 }
 
-export function renderMessages(messages) {
+export function renderMessages(messages, characterName = "Entity") {
   return messages.map((message) => `
     <div class="message-row message-row--${message.role}">
       <div class="message-bubble">
-        <div class="message-meta">${message.role === "user" ? "You" : "Entity"}</div>
+        <div class="message-meta">${message.role === "user" ? "You" : escapeHTML(characterName)}</div>
         <div class="message-content">${message.role === "user" ? escapeHTML(message.content) : renderMarkdown(message.content)}</div>
       </div>
     </div>
@@ -314,7 +415,7 @@ export function renderCurrentChat() {
   if ($("character-avatar")) {
     $("character-avatar").innerHTML = character?.avatarImage
       ? `<img src="${character.avatarImage}" alt="${escapeHTML(character?.name)} avatar">`
-      : escapeHTML(character?.avatar || "✨");
+      : escapeHTML(character?.avatar || "*");
   }
   
   if ($("character-name")) $("character-name").textContent = character?.name || "Unknown Entity";
@@ -322,7 +423,7 @@ export function renderCurrentChat() {
   
   const messageList = $("message-list");
   if (messageList) {
-    messageList.innerHTML = renderMessages(chat.messages);
+    messageList.innerHTML = renderMessages(chat.messages, character?.name);
     messageList.scrollTop = messageList.scrollHeight;
   }
   
@@ -354,6 +455,12 @@ export function renderInfoDrawer() {
       <div class="profile-section">
         <strong>Entity Class</strong>
         <div style="color:var(--text-muted);">${character.isCustom ? "Unbound (Custom)" : "Curated (Default)"}</div>
+      </div>
+      <div class="profile-section">
+        <strong>Tags</strong>
+        <div class="hero-card-tags" style="justify-content:flex-start; margin:0;">
+          ${(character.tags || []).map((tag) => `<span class="hero-card-tag">${escapeHTML(tag)}</span>`).join("") || `<span style="color:var(--text-muted);">None assigned</span>`}
+        </div>
       </div>
     </div>
   `;
@@ -425,3 +532,4 @@ export function initHeroBannerRotation() {
     setHeroBanner(currentHeroIndex);
   }, 5000); // Rotate every 5 seconds
 }
+

@@ -20,8 +20,15 @@ import re
 PORT = 5500
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-DATA_FILE = os.path.join(DATA_DIR, "storage.json")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+
+# New split storage files
+STORAGE_FILES = {
+    "characters": os.path.join(DATA_DIR, "characters.json"),
+    "chats": os.path.join(DATA_DIR, "chats.json"),
+    "archive": os.path.join(DATA_DIR, "archive.json"),
+    "settings": os.path.join(DATA_DIR, "settings.json"),
+}
 
 
 def ensure_dirs():
@@ -30,43 +37,55 @@ def ensure_dirs():
     os.makedirs(ASSETS_DIR, exist_ok=True)
 
 
-def read_storage():
-    """Read and return the storage JSON, or empty dict if not found."""
+def read_json_file(filepath):
+    """Read and return a JSON file, or empty dict if not found."""
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
+        if not os.path.exists(filepath):
+            return {}
+        with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
-def write_storage(data):
-    """Write data to storage.json atomically via temp file."""
-    tmp_path = DATA_FILE + ".tmp"
+def write_json_file(filepath, data):
+    """Write data to a JSON file atomically via temp file."""
+    tmp_path = filepath + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    shutil.move(tmp_path, DATA_FILE)
+    shutil.move(tmp_path, filepath)
 
 
 def parse_multipart(body, boundary):
     """Parse a multipart/form-data body and return (filename, file_bytes)."""
+    # Boundary in Content-Type might be surrounded by quotes
+    boundary = boundary.strip(b'"')
+    
+    # Parts are separated by --boundary
+    # The last part ends with --boundary--
     parts = body.split(b"--" + boundary)
+    
     for part in parts:
         if b"Content-Disposition" not in part:
             continue
+            
         # Split headers from content
         header_end = part.find(b"\r\n\r\n")
         if header_end == -1:
             continue
+            
         header_section = part[:header_end].decode("utf-8", errors="replace")
         file_data = part[header_end + 4:]
-        # Strip trailing \r\n--
+        
+        # Strip trailing \r\n
         if file_data.endswith(b"\r\n"):
             file_data = file_data[:-2]
 
-        # Extract filename from Content-Disposition
+        # Extract filename from Content-Disposition: form-data; name="file"; filename="image.png"
         match = re.search(r'filename="([^"]+)"', header_section)
         if match:
             return match.group(1), file_data
+            
     return None, None
 
 
@@ -75,6 +94,15 @@ class EchoAIHandler(http.server.SimpleHTTPRequestHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
+
+    def guess_type(self, path):
+        content_type = super().guess_type(path)
+        if (
+            content_type.startswith("text/")
+            or content_type in ("application/javascript", "application/json")
+        ) and "charset=" not in content_type:
+            return f"{content_type}; charset=utf-8"
+        return content_type
 
     def end_headers(self):
         # Add CORS headers for local development
@@ -89,47 +117,67 @@ class EchoAIHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/api/data":
+        if self.path.startswith("/api/data"):
             self._handle_get_data()
         else:
             super().do_GET()
 
     def do_POST(self):
-        if self.path == "/api/data":
+        if self.path.startswith("/api/data"):
             self._handle_post_data()
         elif self.path == "/api/upload-avatar":
             self._handle_upload_avatar()
         else:
             self.send_error(404, "Not Found")
 
+    def _get_storage_type(self):
+        """Extract 'type' from query parameters (e.g., /api/data?type=chats)."""
+        match = re.search(r"type=([^&]+)", self.path)
+        return match.group(1) if match else "settings"
+
     def _handle_get_data(self):
-        """Return all stored app data as JSON."""
-        data = read_storage()
+        """Return requested stored app data as JSON."""
+        data_type = self._get_storage_type()
+        filepath = STORAGE_FILES.get(data_type)
+        
+        if not filepath:
+            self.send_error(400, f"Invalid data type: {data_type}")
+            return
+
+        data = read_json_file(filepath)
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        
         self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def _handle_post_data(self):
-        """Save the full app state to storage.json."""
+        """Save a specific data type to its JSON file."""
+        data_type = self._get_storage_type()
+        filepath = STORAGE_FILES.get(data_type)
+        
+        if not filepath:
+            self.send_error(400, f"Invalid data type: {data_type}")
+            return
+
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(content_length)
             data = json.loads(raw.decode("utf-8"))
-            write_storage(data)
+            write_json_file(filepath, data)
 
             body = json.dumps({"ok": True}).encode("utf-8")
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
         except Exception as e:
             body = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
             self.send_response(500)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -172,14 +220,14 @@ class EchoAIHandler(http.server.SimpleHTTPRequestHandler):
             rel_path = f"./assets/{safe_name}"
             body = json.dumps({"ok": True, "path": rel_path}).encode("utf-8")
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
         except Exception as e:
             body = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
             self.send_response(500)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -193,7 +241,7 @@ def main():
     ensure_dirs()
     server = http.server.HTTPServer(("", PORT), EchoAIHandler)
     print(f"[EchoAI] Server running at http://localhost:{PORT}/")
-    print(f"[EchoAI] Data stored in: {DATA_FILE}")
+    print(f"[EchoAI] Data stored in: {DATA_DIR}")
     print(f"[EchoAI] Press Ctrl+C to stop.")
     try:
         server.serve_forever()

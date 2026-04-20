@@ -1,6 +1,28 @@
 import { state, loadState, saveCharacters, saveChats, saveArchivedChats, saveArchivedCharacters, saveSettings, uploadAvatar, getCharacterById, getCurrentChat, uid } from "./state.js";
-import { $, renderHeroCards, renderSidebar, renderSettingsPanel, renderCurrentChat, renderInfoDrawer, goHome, goArchive, resetBuilder, openEditCharacter, toast, openModal, closeModal, autoResizeTextarea, initHeroBannerRotation, toggleSidebar, closeSidebar, renderArchiveScreen } from "./ui.js";
+import { $, renderHeroCards, renderSidebar, renderSettingsPanel, renderCurrentChat, renderInfoDrawer, goHome, goArchive, resetBuilder, openEditCharacter, toast, openModal, closeModal, autoResizeTextarea, initHeroBannerRotation, toggleSidebar, closeSidebar, renderArchiveScreen, renderCategoryTabs, renderBuilderTags } from "./ui.js";
 import { requestAssistantReply, detectModels, refreshConnectionStatus, normalizeApiBaseUrl } from "./api.js";
+
+function normalizeTag(tag) {
+  return String(tag || "").trim().replace(/\s+/g, " ");
+}
+
+function syncCharacterViews() {
+  renderCategoryTabs();
+  renderHeroCards();
+}
+
+function addBuilderTag(rawTag) {
+  const tag = normalizeTag(rawTag);
+  if (!tag) return;
+  if (state.builderTags.some((item) => item.toLowerCase() === tag.toLowerCase())) return;
+  state.builderTags = [...state.builderTags, tag];
+  renderBuilderTags();
+}
+
+function removeBuilderTag(rawTag) {
+  state.builderTags = state.builderTags.filter((tag) => tag.toLowerCase() !== String(rawTag || "").toLowerCase());
+  renderBuilderTags();
+}
 
 function createNewChat(characterId) {
   const character = getCharacterById(characterId);
@@ -14,7 +36,9 @@ function createNewChat(characterId) {
     messages: [
       {
         role: "assistant",
-        content: `Connection secured. I am ${character.name}. ${character.description} What are your directives?`
+        content: character.description.startsWith('"') || character.description.startsWith("'")
+          ? character.description 
+          : `*Connection established with ${character.name}*\n\n${character.description}`
       }
     ]
   };
@@ -91,7 +115,7 @@ function deleteCharacter(characterId) {
 
   saveCharacters();
   saveChats();
-  renderHeroCards();
+  syncCharacterViews();
   renderSidebar();
 
   if (state.currentChatId) {
@@ -110,7 +134,7 @@ export function restoreCharacter(characterId) {
     state.characters.unshift(charToRestore);
     saveArchivedCharacters();
     saveCharacters();
-    renderHeroCards();
+    syncCharacterViews();
     renderSidebar();
     renderArchiveScreen();
     toast(`${charToRestore.name} restored.`);
@@ -131,6 +155,9 @@ function clearCurrentChat() {
   if (!chat) return;
   if (!window.confirm("Purge this conversation data?")) return;
   chat.messages = chat.messages.slice(0, 1);
+  delete chat.summary;
+  delete chat.metadata;
+  delete chat.memoryState;
   saveChats();
   renderCurrentChat();
   toast("Conversation purged.");
@@ -153,6 +180,7 @@ function saveCustomCharacter(event) {
   const name = $("custom-name").value.trim();
   const description = $("custom-description").value.trim() || "Unbound Entity";
   const prompt = $("custom-prompt").value.trim();
+  const tags = state.builderTags.length ? [...state.builderTags] : ["Originals"];
 
   if (!name || !prompt) {
     toast("Name and directives are required.", "error");
@@ -168,16 +196,18 @@ function saveCustomCharacter(event) {
     // Editing existing
     const charIndex = state.characters.findIndex(c => c.id === editId);
     if (charIndex > -1) {
+      const previousName = state.characters[charIndex].name;
       state.characters[charIndex].name = name;
       state.characters[charIndex].description = description;
       state.characters[charIndex].systemPrompt = prompt;
+      state.characters[charIndex].tags = tags;
       state.characters[charIndex].avatar = "";
       state.characters[charIndex].avatarImage = state.uploadedImagePath;
       
       // Update chat titles if name changed
       state.chats.forEach(chat => {
-        if (chat.characterId === editId && chat.title === getCharacterById(editId).name) {
-            chat.title = name;
+        if (chat.characterId === editId && chat.title === previousName) {
+          chat.title = name;
         }
       });
       toast(`${name} updated.`);
@@ -190,6 +220,7 @@ function saveCustomCharacter(event) {
       title: "UNBOUND ENTITY",
       description,
       systemPrompt: prompt,
+      tags,
       avatar: "",
       avatarImage: state.uploadedImagePath,
       isCustom: true
@@ -199,7 +230,7 @@ function saveCustomCharacter(event) {
 
   saveCharacters();
   saveChats();
-  renderHeroCards();
+  syncCharacterViews();
   renderSidebar();
   
   if (state.currentChatId && getCurrentChat()?.characterId === editId) {
@@ -318,6 +349,24 @@ function bindEvents() {
 
   $("back-to-home-btn").addEventListener("click", goHome);
   $("character-form").addEventListener("submit", saveCustomCharacter);
+  $("search-input").addEventListener("input", (event) => {
+    state.searchQuery = event.target.value.trim();
+    syncCharacterViews();
+  });
+  $("add-tag-btn").addEventListener("click", () => {
+    const input = $("custom-tag-input");
+    if (!input) return;
+    addBuilderTag(input.value);
+    input.value = "";
+    input.focus();
+  });
+  $("custom-tag-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addBuilderTag(event.target.value);
+      event.target.value = "";
+    }
+  });
   $("avatar-file").addEventListener("change", handleAvatarUpload);
   $("message-input").addEventListener("input", autoResizeTextarea);
   $("message-input").addEventListener("keydown", (event) => {
@@ -375,6 +424,22 @@ function bindEvents() {
     if (editCharacterBtn) {
       openEditCharacter(editCharacterBtn.dataset.editCharacter);
     }
+
+    const tagFilterButton = event.target.closest("[data-tag-filter]");
+    if (tagFilterButton) {
+      state.activeTag = tagFilterButton.dataset.tagFilter || "All";
+      syncCharacterViews();
+    }
+
+    const addBuilderTagButton = event.target.closest("[data-add-builder-tag]");
+    if (addBuilderTagButton) {
+      addBuilderTag(addBuilderTagButton.dataset.addBuilderTag);
+    }
+
+    const removeBuilderTagButton = event.target.closest("[data-remove-builder-tag]");
+    if (removeBuilderTagButton) {
+      removeBuilderTag(removeBuilderTagButton.dataset.removeBuilderTag);
+    }
     
     const restoreChatBtn = event.target.closest("[data-restore-chat]");
     if (restoreChatBtn) restoreChat(restoreChatBtn.dataset.restoreChat);
@@ -406,7 +471,8 @@ function bindEvents() {
 async function init() {
   await loadState();
   bindEvents();
-  renderHeroCards();
+  renderBuilderTags();
+  syncCharacterViews();
   renderSidebar();
   renderSettingsPanel();
   autoResizeTextarea();
