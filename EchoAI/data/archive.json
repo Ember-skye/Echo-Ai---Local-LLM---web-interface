@@ -1,0 +1,16 @@
+{
+  "archivedChats": [
+    {
+      "id": "chat_1776704746167_kw2htv",
+      "characterId": "char_echo",
+      "title": "Echo-7",
+      "createdAt": 1776704746167,
+      "messages": [
+        {
+          "role": "assistant",
+          "content": "*Connection established with Echo-7*\n\nA sentient space relay station holding ancient data."
+        }
+      ]
+    }
+  ]
+}

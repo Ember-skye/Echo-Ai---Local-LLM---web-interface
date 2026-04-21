@@ -1,69 +1,109 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoAI Remix</title>
+  <title>LLM link</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles/main.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23ff86c3'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='30' font-family='Arial' fill='%231a0f0c'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css?v=20260420-3">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 <body>
   <div class="app-shell">
+    <div class="sidebar__backdrop" id="sidebar-backdrop"></div>
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__brand">
-        <button class="sidebar__toggle mobile-only icon-button" id="sidebar-close" type="button" aria-label="Close sidebar">×</button>
-        <div class="brand-mark">✦</div>
+        <button class="sidebar__toggle mobile-only icon-button" id="sidebar-close" type="button"
+          aria-label="Close sidebar">&times;</button>
+        <div class="brand-mark">&#10022;</div>
         <div>
-          <div class="brand-title">EchoAI</div>
-          <div class="brand-tag">Local Character Chats</div>
+          <div class="brand-title">LLM LINK</div>
+          <div class="brand-tag">ADMIN ACCESS</div>
         </div>
       </div>
 
-      <button class="primary-button primary-button--wide" id="new-chat-btn" type="button">
-        <span>+</span>
-        <span>New Character Chat</span>
-      </button>
+      <nav class="sidebar-nav">
+        <button class="nav-button is-active" id="nav-explore-btn" type="button">
+          Explore
+        </button>
+        <button class="nav-button nav-button--create" id="new-character-btn" type="button">
+          + New Character
+        </button>
+        <button class="nav-button" id="nav-archive-btn" type="button">
+          Archive chats
+        </button>
+        <button class="nav-button" id="nav-settings-btn" type="button">
+          Settings
+        </button>
+      </nav>
 
-      <div class="sidebar__section-heading">
-        <span>Your Chats</span>
-        <button class="icon-button" id="clear-all-btn" type="button" title="Delete all chats">⌫</button>
+      <div class="sidebar__recent-chats">
+        <div class="sidebar__section-heading">
+          <span>Recent Chats</span>
+          <button class="icon-button" id="clear-all-btn" type="button" title="Delete all chats">&#9003;</button>
+        </div>
+        <div class="sidebar-chat-list" id="chat-list"></div>
       </div>
-
-      <div class="chat-list" id="chat-list"></div>
 
       <div class="sidebar__status status-pill" id="connection-status">
         <span class="status-pill__dot"></span>
-        <span>LM Studio not checked</span>
+        <span>LM Studio not connected</span>
       </div>
     </aside>
 
     <main class="main-panel">
       <section class="hero-screen" id="welcome-screen">
         <div class="hero-screen__content">
-          <div class="hero-topbar">
-            <div class="hero-badge">Runs locally with LM Studio</div>
-            <button class="secondary-button secondary-button--compact" id="hero-open-settings" type="button">Settings</button>
+
+          <div class="dynamic-hero-banner" id="dynamic-hero-banner">
+            <div class="hero-banner-image" id="hero-banner-image"></div>
+            <div class="hero-banner-content">
+              <div class="hero-banner-tag" id="hero-banner-tag">FEATURED</div>
+              <h1 id="hero-banner-title">THE NEON OVERSEER</h1>
+              <p id="hero-banner-desc">A sentient system designed to manage neural networks.</p>
+              <div class="hero-actions">
+                <button class="primary-button" id="hero-banner-action" type="button">Connect</button>
+              </div>
+            </div>
           </div>
 
-          <h2>AI character chats on your own machine.</h2>
-          <p>Pick a character from the home screen, start chatting instantly, or create your own persona with a custom avatar.</p>
-
-          <div class="hero-actions">
-            <button class="primary-button" id="hero-open-picker" type="button">Browse Characters</button>
-            <button class="secondary-button" id="open-custom-builder" type="button">Create Character</button>
+          <div class="search-filter-bar">
+            <input type="text" class="search-input" id="search-input" placeholder="Find entities...">
+            <div class="category-tabs" id="category-tabs"></div>
           </div>
 
-          <div class="hero-cards" id="hero-character-preview"></div>
+          <div class="section-title">
+            <h2>Active Creations</h2>
+            <p>Recently emerged from the neural net.</p>
+          </div>
+
+          <div class="hero-cards character-grid" id="hero-character-preview"></div>
+        </div>
+      </section>
+
+      <section class="archive-screen hidden" id="archive-screen">
+        <div class="hero-screen__content">
+          <div class="section-title">
+            <h2>Archive Hub</h2>
+            <p>Dormant neural links and severed connections.</p>
+          </div>
+          <div class="archive-grid" id="archive-list"></div>
         </div>
       </section>
 
       <section class="chat-screen hidden" id="chat-screen">
         <header class="chat-header">
           <div class="chat-header__main">
-            <button class="icon-button mobile-only" id="sidebar-open" type="button" title="Open sidebar">☰</button>
-            <button class="icon-button" id="back-to-home-btn" type="button" title="Back">←</button>
+            <button class="icon-button mobile-only" id="sidebar-open" type="button" title="Open sidebar">&#9776;</button>
+            <button class="icon-button" id="back-to-home-btn" type="button" title="Back">&larr;</button>
             <div class="chat-header__avatar" id="character-avatar"></div>
             <div>
               <div class="chat-header__title" id="character-name"></div>
@@ -72,10 +112,14 @@
           </div>
 
           <div class="chat-header__actions">
-            <button class="secondary-button secondary-button--compact" id="chat-settings-btn" type="button">Settings</button>
-            <button class="secondary-button secondary-button--compact" id="regenerate-btn" type="button">Regenerate</button>
-            <button class="secondary-button secondary-button--compact danger-button" id="clear-chat-btn" type="button">Clear</button>
-            <button class="secondary-button secondary-button--compact" id="character-info-btn" type="button">Info</button>
+            <button class="secondary-button secondary-button--compact" id="chat-settings-btn"
+              type="button">Settings</button>
+            <button class="secondary-button secondary-button--compact" id="regenerate-btn"
+              type="button">Regenerate</button>
+            <button class="secondary-button secondary-button--compact danger-button" id="clear-chat-btn"
+              type="button">Clear</button>
+            <button class="secondary-button secondary-button--compact" id="character-info-btn"
+              type="button">Info</button>
           </div>
         </header>
 
@@ -88,7 +132,6 @@
               <button class="primary-button primary-button--compact" id="send-btn" type="button">Send</button>
             </div>
           </div>
-          <p class="composer__hint">Chats are saved locally in your browser.</p>
         </footer>
       </section>
     </main>
@@ -99,25 +142,21 @@
     <div class="modal__panel">
       <div class="modal__header">
         <div>
-          <h2>Create a character</h2>
-          <p>Everything here stays in local storage unless you delete it.</p>
+          <h2 id="builder-title">Create an Entity</h2>
+          <p>Forge a new persona into existence.</p>
         </div>
-        <button class="icon-button" type="button" data-close-modal="builder-modal">×</button>
+        <button class="icon-button" type="button" data-close-modal="builder-modal">&times;</button>
       </div>
 
       <form class="stack" id="character-form">
+        <input type="hidden" id="edit-character-id" value="">
         <label class="field">
           <span>Name</span>
           <input id="custom-name" type="text" maxlength="32" placeholder="Shadow, Nova, Sol...">
         </label>
 
         <div class="avatar-builder">
-          <div>
-            <div class="field-label">Emoji avatar</div>
-            <div class="emoji-grid" id="emoji-grid"></div>
-          </div>
-
-          <div class="field">
+          <div class="field" style="width: 100%;">
             <span>Upload image avatar</span>
             <label class="upload-dropzone" for="avatar-file">
               <strong>Drop an image or click to upload</strong>
@@ -130,17 +169,31 @@
 
         <label class="field">
           <span>Short description</span>
-          <input id="custom-description" type="text" maxlength="100" placeholder="A grounded strategist with a dry sense of humor">
+          <input id="custom-description" type="text" maxlength="100"
+            placeholder="A grounded strategist with a dry sense of humor">
         </label>
 
         <label class="field">
           <span>Personality prompt</span>
-          <textarea id="custom-prompt" rows="5" placeholder="You are a calm strategist who answers clearly, asks thoughtful questions, and stays practical."></textarea>
+          <textarea id="custom-prompt" rows="5"
+            placeholder="You are a calm strategist who answers clearly, asks thoughtful questions, and stays practical."></textarea>
         </label>
+
+        <div class="field">
+          <span>Tags</span>
+          <div class="tag-builder">
+            <div class="inline-field">
+              <input id="custom-tag-input" type="text" maxlength="24" placeholder="Add a tag and press Enter">
+              <button class="secondary-button secondary-button--compact" id="add-tag-btn" type="button">Add Tag</button>
+            </div>
+            <div class="tag-chip-list" id="builder-tag-list"></div>
+            <div class="tag-suggestion-list" id="builder-tag-suggestions"></div>
+          </div>
+        </div>
 
         <div class="split-actions">
           <button class="secondary-button" type="button" data-close-modal="builder-modal">Cancel</button>
-          <button class="primary-button" type="submit">Create Character</button>
+          <button class="primary-button" type="submit" id="builder-submit-btn">Create Entity</button>
         </div>
       </form>
     </div>
@@ -151,10 +204,10 @@
     <div class="modal__panel">
       <div class="modal__header">
         <div>
-          <h2>LM Studio Settings</h2>
-          <p>Connect to your local server and choose the active model.</p>
+          <h2>Neural Link Settings</h2>
+          <p>Connect to your local LM Studio node.</p>
         </div>
-        <button class="icon-button" type="button" data-close-modal="settings-modal">×</button>
+        <button class="icon-button" type="button" data-close-modal="settings-modal">&times;</button>
       </div>
 
       <div class="stack">
@@ -167,7 +220,8 @@
           <span>Model</span>
           <div class="inline-field">
             <select id="model-select"></select>
-            <button class="secondary-button secondary-button--compact" id="detect-models-btn" type="button">Detect</button>
+            <button class="secondary-button secondary-button--compact" id="detect-models-btn"
+              type="button">Detect</button>
           </div>
         </label>
 
@@ -187,17 +241,17 @@
   <aside class="info-drawer hidden" id="info-drawer">
     <div class="info-drawer__header">
       <div>
-        <h2>Character Info</h2>
-        <p>Profile and system prompt</p>
+        <h2>Entity Info</h2>
+        <p>Profile and system directives</p>
       </div>
-      <button class="icon-button" id="close-info-btn" type="button">×</button>
+      <button class="icon-button" id="close-info-btn" type="button">&times;</button>
     </div>
     <div class="info-drawer__content" id="info-drawer-content"></div>
   </aside>
 
   <div class="toast-stack" id="toast-stack"></div>
 
-  <script src="./scripts/data.js"></script>
-  <script src="./scripts/main.js"></script>
+  <script type="module" src="./scripts/main.js"></script>
 </body>
+
 </html>

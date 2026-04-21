@@ -1,0 +1,14 @@
+{
+  "settings": {
+    "apiBaseUrl": "http://localhost:1234/v1",
+    "selectedModel": "google/gemma-3-1b",
+    "availableModels": [
+      "google/gemma-3-1b",
+      "qwen/qwen3-vl-4b",
+      "nvidia/nemotron-3-nano-4b",
+      "google/gemma-3n-e4b",
+      "text-embedding-nomic-embed-text-v1.5"
+    ],
+    "temperature": 0.8
+  }
+}
